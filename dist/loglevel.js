@@ -1,4 +1,4 @@
-/*! loglevel - v1.4.0 - https://github.com/pimterry/loglevel - (c) 2015 Tim Perry - licensed MIT */
+/*! loglevel - v1.4.0 - https://github.com/ganonside/ganon-loglevel - (c) 2015 Jonathan Horner - licensed MIT */
 (function (root, definition) {
     "use strict";
     if (typeof module === 'object' && module.exports && typeof require === 'function') {
@@ -62,6 +62,18 @@
         }
     }
 
+    function replaceExternalLoggingMethods(level, externalMethods, loggerName) {
+      /*jshint validthis:true */
+      for (var i = 0; i < externalMethods.length; ++i) {
+        var methodName = externalMethods[i];
+        if (!this[methodName]) {
+          this[methodName] = (level === 5) ?
+            noop :
+            this.methodFactory(methodName, level, loggerName);
+        }
+      }
+    }
+
     function defaultMethodFactory(methodName, level, loggerName) {
         /*jshint validthis:true */
         return realMethod(methodName) ||
@@ -76,7 +88,7 @@
         "error"
     ];
 
-    function Logger(name, defaultLevel, factory) {
+    function Logger(name, defaultLevel, factory, additionalMethods) {
       var self = this;
       var currentLevel;
       var storageKey = "loglevel";
@@ -151,6 +163,9 @@
                   persistLevelIfPossible(level);
               }
               replaceLoggingMethods.call(self, level, name);
+              if (additionalMethods) {
+                replaceExternalLoggingMethods.call(self, level, additionalMethods, name);
+              }
               if (typeof console === undefinedType && level < self.levels.SILENT) {
                   return "No console available for logging";
               }
@@ -163,6 +178,10 @@
           if (!getPersistedLevel()) {
               self.setLevel(level, false);
           }
+      };
+
+      self.log = function(message) {
+        return self[self.getLevel];
       };
 
       self.enableAll = function(persist) {
